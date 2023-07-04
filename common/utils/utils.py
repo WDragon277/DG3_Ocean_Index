@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 def searchAPI(index_name):
   es = Elasticsearch('http://121.138.113.16:19202')
+  logger.info('데이터베이스에 접속 성공하였습니다.')
   index = index_name
   body = {
     'size': 10000,
@@ -77,6 +78,8 @@ def switch_idx_data(df):
     #중복 제거
     df_total = df_total.drop_duplicates(keep='first', inplace=False, ignore_index= True)
 
+    logger.info('데이터베이스에 접속 성공하였습니다.')
+
     return df_total
 
 def interpolation(df):
@@ -86,6 +89,7 @@ def interpolation(df):
 def df_corr_hrci(df):
     indx_corr = []
     rang = range(30)
+    # result = 0
     for i in rang:
         j = -i
         df['hrci_cach_expo_shifted'] = df['hrci_cach_expo'].shift(j)
@@ -93,9 +97,17 @@ def df_corr_hrci(df):
                                  ['hrci_cach_expo_shifted'][1:3].mean()])
         sorted_indx_corr = sorted(indx_corr, key=lambda x: x[1], reverse=True)
         result = sorted_indx_corr[0]
-        logger.info('적절한 예측 기간 : ', result)
-
+    logger.info(f"적절한 예측 기간 : {result}")
     return result
+
+def df_date():
+    start_date = '2021-01-04' #초깃값 설정 필요시 공통에서 변수 선언하여 변경
+    end_date = pd.Timestamp.now().strftime("%Y-%m-%d")
+    date_range = pd.date_range(start=start_date,end=end_date,freq = "D")
+
+    date_column = date_range.strftime("%Y%m%d")
+    df_date = pd.DataFrame({"Date" : date_column})
+    return df_date
 
 def draw_graph(df_total,index):
     #하나의 그래프(아티스트)에 모두 그리기
@@ -173,28 +185,6 @@ def raw_data():
     df_interpolated = interpolation(df_total)
 
     return df_interpolated
-
-def defined_data():
-
-    df = searchAPI("dgl_idx_expo_lst")
-    # 코드 데이터 칼럼화
-    df_total = switch_idx_data(df)
-    # 보간법 적용
-    df_interpolated = interpolation(df_total)
-    # 가장 상관도가 높은 위치로 데이터 이동
-    df_interpolated['hrci_cach_expo_shifted'] = df_interpolated['hrci_cach_expo'].shift(df_corr(df_interpolated)[0])
-
-    return df_interpolated
-
-def pred_data():
-    df = searchAPI("dgl_idx_expo_lst")
-    # 코드 데이터 칼럼화
-    df_total = switch_idx_data(df)
-    # 보간법 적용
-    df_interpolated = interpolation(df_total)
-    pred_data_tmp = df_interpolated[df_corr(df_interpolated)[0]:]
-    pred_data = pred_data_tmp[['rgsr_dt','scfi_cach_expo','ccfi_cach_expo']]
-    return pred_data
 
 ## 데이터 입력시 활용
 def doc_type_setting(index):

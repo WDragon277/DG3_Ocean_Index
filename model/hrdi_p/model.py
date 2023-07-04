@@ -1,4 +1,6 @@
+import pandas as pd
 from sklearn.metrics import mean_absolute_error
+from common.utils import df_date
 import numpy as np
 import sys
 from sklearn.ensemble import GradientBoostingRegressor
@@ -14,8 +16,7 @@ def pred_hrci_model():
     last_non_nan_index = non_nan_indices[-1]
 
     data['hrci_cach_expo_pred'] = data['hrci_cach_expo']
-    data['hrci_cach_expo_pred'][last_non_nan_index-1:] = np.nan
-
+    # data['hrci_cach_expo_pred'][last_non_nan_index-1:] = np.nan
 
     X = np.array(data[['ccfi_cach_expo','scfi_cach_expo']])
     y = np.array(data['hrci_cach_expo_shifted'].dropna())
@@ -27,9 +28,18 @@ def pred_hrci_model():
     model = GradientBoostingRegressor()
     model.fit(X_train, y_train)
     y_pred = model.predict(X_pred)
-    data['hrci_cach_expo'][last_non_nan_index-1:] = y_pred
+    data['hrci_cach_expo_pred'][last_non_nan_index-1:] = y_pred
 
-    return y_pred
+
+    # 실제 인덱스 값
+    result_real = pd.DataFrame({'data_cd':'hrci', 'rgsr_dt':data['rgst_dt'][:last_non_nan_index-1], 'cach_expo': data['hrci_cach_expo'],'pred': 'N'})
+    # 예측 인덱스 값
+    result_pred = pd.DataFrame({'data_cd':'hrci', 'rgsr_dt':rgst_date[last_non_nan_index-1:], 'cach_expo': y_pred, 'pred': 'Y'})
+    # 전체 인덱스 값
+    result_total = result_real.merge(result_pred)
+
+    return result_total
+
 
 # R2_score = model.score(X_pred, y_pred)
 # mae_score = mean_absolute_error(X_pred, y_pred)
